@@ -72,3 +72,21 @@ def predict(transaction: Transaction):
             status_code=400,
             detail=str(error),
         )
+
+
+@app.post("/explain")
+def explain(transaction: Transaction):
+    try:
+        explanation = predictor.explain(
+            transaction.model_dump()
+        )
+
+        return {
+            "explanation": explanation
+        }
+
+    except Exception as error:
+        raise HTTPException(
+            status_code=400,
+            detail=str(error),
+        )

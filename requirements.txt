@@ -12,3 +12,4 @@ uvicorn
 requests
 pytest
 httpx
+streamlit

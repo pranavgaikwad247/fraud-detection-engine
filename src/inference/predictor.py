@@ -2,6 +2,7 @@ from pathlib import Path
 
 import joblib
 import pandas as pd
+import shap
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -45,7 +46,7 @@ FEATURES = [
 
 
 class FraudPredictor:
-    """Loads the trained fraud detection model and makes predictions."""
+    """Loads the fraud model and performs predictions and explanations."""
 
     def __init__(self):
         print("Loading fraud detection model...")
@@ -53,13 +54,14 @@ class FraudPredictor:
         self.model = joblib.load(MODEL_PATH)
         self.threshold = joblib.load(THRESHOLD_PATH)
 
+        self.explainer = shap.TreeExplainer(self.model)
+
         print("Model loaded successfully.")
         print(f"Fraud threshold: {self.threshold}")
 
-    def predict(self, transaction: dict) -> dict:
-        """Predict whether a transaction is potentially fraudulent."""
+    def _prepare_transaction(self, transaction: dict):
+        """Validate and convert transaction into model input."""
 
-        # Check that all required features exist
         missing_features = [
             feature
             for feature in FEATURES
@@ -71,17 +73,21 @@ class FraudPredictor:
                 f"Missing required features: {missing_features}"
             )
 
-        # Keep features in the exact order used during training
-        data = pd.DataFrame(
+        return pd.DataFrame(
             [[transaction[feature] for feature in FEATURES]],
             columns=FEATURES,
         )
 
-        # Get fraud probability
+    def predict(self, transaction: dict) -> dict:
+        """Predict whether a transaction is potentially fraudulent."""
+
+        data = self._prepare_transaction(transaction)
+
         fraud_probability = self.model.predict_proba(data)[0][1]
 
-        # Apply our saved threshold
-        prediction = int(fraud_probability >= self.threshold)
+        prediction = int(
+            fraud_probability >= self.threshold
+        )
 
         if prediction == 1:
             decision = "POTENTIAL_FRAUD"
@@ -89,8 +95,71 @@ class FraudPredictor:
             decision = "LEGITIMATE"
 
         return {
-            "fraud_probability": round(float(fraud_probability), 4),
+            "fraud_probability": round(
+                float(fraud_probability),
+                4,
+            ),
             "prediction": prediction,
             "decision": decision,
             "threshold": self.threshold,
         }
+
+    def explain(self, transaction: dict) -> list:
+        """Return the strongest SHAP factors for the transaction."""
+
+        data = self._prepare_transaction(transaction)
+
+        shap_values = self.explainer.shap_values(data)
+
+        # Random Forest binary classification:
+        # SHAP may return either a list or a 3D ndarray
+        if isinstance(shap_values, list):
+
+            fraud_shap_values = shap_values[1][0]
+
+        elif hasattr(shap_values, "ndim") and shap_values.ndim == 3:
+
+            fraud_shap_values = shap_values[0, :, 1]
+
+        else:
+
+            fraud_shap_values = shap_values[0]
+
+        explanation = pd.DataFrame({
+            "feature": FEATURES,
+            "shap_value": fraud_shap_values,
+        })
+
+        explanation["absolute_impact"] = (
+            explanation["shap_value"].abs()
+        )
+
+        explanation["direction"] = explanation[
+            "shap_value"
+        ].apply(
+            lambda value:
+            "Toward Fraud"
+            if value > 0
+            else "Toward Legitimate"
+        )
+
+        explanation = explanation.sort_values(
+            "absolute_impact",
+            ascending=False,
+        ).head(10)
+
+        return [
+            {
+                "feature": row["feature"],
+                "shap_value": round(
+                    float(row["shap_value"]),
+                    6,
+                ),
+                "absolute_impact": round(
+                    float(row["absolute_impact"]),
+                    6,
+                ),
+                "direction": row["direction"],
+            }
+            for _, row in explanation.iterrows()
+        ]

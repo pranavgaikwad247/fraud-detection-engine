@@ -100,4 +100,21 @@ def test_missing_feature():
     )
 
     assert response.status_code == 422
-    
+
+def test_explain_endpoint():
+    response = client.post("/explain", json=VALID_TRANSACTION)
+
+    assert response.status_code == 200
+
+    data = response.json()
+
+    assert "explanation" in data
+    assert isinstance(data["explanation"], list)
+    assert len(data["explanation"]) > 0
+
+    first_item = data["explanation"][0]
+
+    assert "feature" in first_item
+    assert "shap_value" in first_item
+    assert "absolute_impact" in first_item
+    assert "direction" in first_item
