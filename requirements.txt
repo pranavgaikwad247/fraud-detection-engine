@@ -6,3 +6,9 @@ matplotlib
 seaborn
 joblib
 jupyter
+shap
+fastapi
+uvicorn
+requests
+pytest
+httpx
