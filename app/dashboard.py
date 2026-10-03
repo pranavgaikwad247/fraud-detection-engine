@@ -1,5 +1,5 @@
 from pathlib import Path
-
+import os
 import pandas as pd
 import requests
 import streamlit as st
@@ -9,7 +9,7 @@ import streamlit as st
 # CONFIGURATION
 # =========================================================
 
-API_URL = "http://127.0.0.1:8000"
+API_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
