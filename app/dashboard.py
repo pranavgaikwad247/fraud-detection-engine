@@ -16,8 +16,8 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 DATA_PATH = (
     PROJECT_ROOT
     / "data"
-    / "raw"
-    / "creditcard.csv"
+    / "demo"
+    / "demo_transactions.csv"
 )
 
 
