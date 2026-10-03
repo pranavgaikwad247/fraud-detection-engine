@@ -44,4 +44,10 @@ The project covers the complete ML lifecycle:
                                          SHAP
                                            │
                                     Model Artifacts
-                                    
+
+
+## 🚀 Live Demo
+
+- **Dashboard:** https://fraud-detection-dashboard-e7d3.onrender.com
+- **API:** https://fraud-detection-engine-jl5n.onrender.com
+- **API Documentation:** https://fraud-detection-engine-jl5n.onrender.com/docs
